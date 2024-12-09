@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict
 
 @dataclass
 class Point:
@@ -7,6 +7,7 @@ class Point:
     y: int
     isObstacle: bool = False
     isTraversed: bool = False
+    travelDirections: str = ''
 
 @dataclass
 class Guard:
@@ -24,7 +25,6 @@ def day6():
     data = import_data('./data/day6.txt')
     guard = get_initial_guard(data)
     points = patrol(data, guard)
-    print(len(points))
 
 def import_data(file: str) -> Grid:
     grid = Grid(list(), 0, 0)
@@ -106,16 +106,104 @@ def get_initial_guard(grid: Grid) -> Guard:
     return None
 
 def patrol(grid: Grid, guard: Guard) -> List[Point]:
-    route = list()
-    route.append(guard.pos)
+    route: List[Point] = list()
+    loops: int = 0
+
+    newPos = guard.pos
+    newPos.travelDirections = guard.dir
+    route.append(newPos)
+    #route.append(guard.pos)
     while not guard.gone:
+        if detect_route(grid, route, guard):
+            loops += 1
         guard = get_next_pos(grid, guard)
-        if guard.pos not in route:
-            route.append(guard.pos)
 
+        for p in route:
+            if p.x == guard.pos.x and p.y == guard.pos.y:
+                break
+        else:
+            newPos = guard.pos
+            newPos.travelDirections = guard.dir
+            route.append(newPos)
+        # if guard.pos not in route:
+        #     route.append(guard.pos)
+
+    print(f'Route: {len(route)}')
+    print(f'Loops: {loops}')
     return route
-    
 
+# def insert_obstacle(grid: Grid, point: Point):
+#     point.isObstacle = True
+#     grid.poi.append(point)
+
+def detect_route(grid: Grid, routes: List[Point], guard: Guard) -> bool:
+    # Test if there is a unblocked route on right of the current path
+    validRoutes: List[Point] = list()
+    validRoutes.extend(grid.poi)
+    validRoutes.extend(routes)
+    nearestPoint: Point = None
+    points: Dict[str, Point] = {
+        'north': None,
+        'south': None,
+        'east': None,
+        'west': None,
+        'obst': None,
+    }
+    
+    if guard.dir == 'north':
+        # Filter all routes on same y
+        validRoutes = [p for p in validRoutes if p.y == guard.pos.y]
+        # Filter all routes where x is less than current
+        validRoutes = [p for p in validRoutes if p.x > guard.pos.x]
+        # Find nearest point going east that isn't blocked            
+        for p in validRoutes:
+            if p.isObstacle or 'east' in p.travelDirections:
+                if nearestPoint is None:
+                    nearestPoint = p
+                elif p.x < nearestPoint.x:
+                    nearestPoint = p
+    elif guard.dir == 'south':
+        # Filter all routes on same y
+        validRoutes = [p for p in validRoutes if p.y == guard.pos.y]
+        # Filter all routes where x is greater than current
+        validRoutes = [p for p in validRoutes if p.x < guard.pos.x]
+        # Find nearest point going east that isn't blocked            
+        for p in validRoutes:
+            if p.isObstacle or 'west' in p.travelDirections:
+                if nearestPoint is None:
+                    nearestPoint = p
+                elif p.x > nearestPoint.x:
+                    nearestPoint = p
+    elif guard.dir == 'east':
+        # Filter all routes on same y
+        validRoutes = [p for p in validRoutes if p.x == guard.pos.x]
+        # Filter all routes where y is less than current
+        validRoutes = [p for p in validRoutes if p.y > guard.pos.y]
+        # Find nearest point going east that isn't blocked            
+        for p in validRoutes:
+            if p.isObstacle or 'south' in p.travelDirections:
+                if nearestPoint is None:
+                    nearestPoint = p
+                elif p.y < nearestPoint.y:
+                    nearestPoint = p
+    elif guard.dir == 'west':
+        # Filter all routes on same x
+        validRoutes = [p for p in validRoutes if p.x == guard.pos.x]
+        # Filter all routes where y is less than current
+        validRoutes = [p for p in validRoutes if p.y < guard.pos.y]
+        # Find nearest point going east that isn't blocked            
+        for p in validRoutes:
+            if p.isObstacle or 'north' in p.travelDirections:
+                if nearestPoint is None:
+                    nearestPoint = p
+                elif p.y > nearestPoint.y:
+                    nearestPoint = p
+
+    if nearestPoint is None or nearestPoint.isObstacle:
+        return False
+
+    #print(f'Nearest: {nearestPoint}')
+    return True
 
 
 if __name__ == "__main__":
