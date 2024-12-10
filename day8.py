@@ -68,16 +68,24 @@ class Day8:
                 p.node = True
                 self.nodes.append(p)
 
-    def calculate_node(self, p1: Point, p2: Point) -> Point:
+    def calculate_nodes(self, p1: Point, p2: Point, resonant: bool = False) -> List[Point]:
+        nodes: List[Point] = list()
+        if resonant: nodes.append(p1)
         x = p1.x - p2.x
         y = p1.y - p2.y
         nodeX = p1.x + x
         nodeY = p1.y + y
-        if nodeX > self.maxX or nodeY > self.maxY or nodeX < 0 or nodeY < 0:
-            return None
-        return Point(nodeX, nodeY, node=True)
+        while not (nodeX > self.maxX or nodeY > self.maxY or nodeX < 0 or nodeY < 0):
+            nodes.append(Point(nodeX, nodeY, node=True))
+            if not resonant:
+                return nodes
+            else:
+                nodeX += x
+                nodeY += y
+
+        return nodes
     
-    def generate_nodes(self):
+    def generate_nodes(self, resonant: bool = False):
         for freq in self.freqs:
             # Iterate main tower
             for i in range(len(self.towers[freq])):
@@ -85,13 +93,14 @@ class Day8:
                 p1 = towers.pop(i)
                 # Iterate over remaining towers
                 for p2 in towers:
-                    node = self.calculate_node(p1, p2)
-                    if node is not None:
-                        self.add_node(node.x, node.y)
+                    nodes = self.calculate_nodes(p1, p2, resonant=resonant)
+                    if len(nodes) > 0:
+                        for node in nodes:
+                            self.add_node(node.x, node.y)
     
 if __name__ == "__main__":
     t = Day8()
     t.import_data()
-    t.generate_nodes()
+    t.generate_nodes(True)
     print(len(t.nodes))
     pass
